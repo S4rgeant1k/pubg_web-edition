@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<meta name="theme-color" content="#12151a" />
+<title>PUBG: Web Edition — королевская битва в браузере</title>
+<meta name="description" content="Полноценная 3D-королевская битва в браузере: самолёт, парашют, лут, боты, синяя зона. Без установки и без 50 ГБ на диске." />
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='18' fill='%2312151a'/%3E%3Ctext x='50' y='70' font-size='58' text-anchor='middle' fill='%23f3c33c'%3E%F0%9F%94%AB%3C/text%3E%3C/svg%3E" />
+<link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+<div id="app">
+  <canvas id="game"></canvas>
+
+  <!-- Экран загрузки -->
+  <div id="loading">
+    <div class="logo">
+      <span class="logoMark">PUBG</span>
+      <span class="logoSub">WEB EDITION</span>
+    </div>
+    <div class="loadBar"><i></i></div>
+    <p>Генерируем остров, дома и лут…</p>
+  </div>
+
+  <!-- HUD -->
+  <div id="hud" class="hidden">
+    <div id="dmgVignette"></div>
+    <div id="hitfx"></div>
+
+    <div class="topLeft">
+      <div class="pill"><span class="pillIcon">👤</span><b id="aliveCount">35</b><small>живых</small></div>
+      <div class="pill"><span class="pillIcon">🎯</span><b id="killCount">0</b><small>убийств</small></div>
+    </div>
+
+    <div class="topCenter">
+      <div id="compass"><div id="compassStrip"></div><i class="compassArrow"></i></div>
+      <div class="zoneRow">
+        <span id="zoneLabel">Зона</span>
+        <b id="zoneTimer">1:00</b>
+      </div>
+    </div>
+
+    <div class="topRight">
+      <div class="mapWrap"><canvas id="minimap" width="230" height="230"></canvas></div>
+      <div class="clockRow"><span id="gameClock">0:00</span><span class="muted">M — карта · N — звук</span></div>
+      <div id="killfeed"></div>
+    </div>
+
+    <div id="crosshair">
+      <i class="ch t"></i><i class="ch b"></i><i class="ch l"></i><i class="ch r"></i><i class="ch dot"></i>
+    </div>
+    <div id="hitmarker"><i></i><i></i><i></i><i></i></div>
+    <div id="scope" class="hidden">
+      <div class="scopeGlass"></div>
+      <div class="scopeLine h"></div>
+      <div class="scopeLine v"></div>
+      <div class="scopeDot"></div>
+    </div>
+
+    <div id="reloadBar" class="progress hidden"><span>ПЕРЕЗАРЯДКА</span><div><i id="reloadFill"></i></div></div>
+    <div id="healBar" class="progress heal hidden"><span>ЛЕЧЕНИЕ</span><div><i id="healFill"></i></div></div>
+
+    <div id="prompt" class="hidden">
+      <span class="key">F</span><span id="promptText">подобрать</span>
+    </div>
+
+    <div id="planeHint" class="hidden"></div>
+    <div id="altitude" class="hidden"></div>
+    <div id="dropHint" class="hidden"></div>
+    <div id="bigText"></div>
+    <div id="toasts"></div>
+
+    <div class="bottomLeft">
+      <div class="vitalRow">
+        <span class="vitalLabel">HP</span>
+        <div class="bar hp"><i id="hpBar"></i><b id="hpText">100</b></div>
+      </div>
+      <div class="vitalRow small">
+        <span class="vitalLabel">БР</span>
+        <div class="bar armor"><i id="armorBar"></i></div>
+        <span id="armorText" class="muted">Без брони</span>
+      </div>
+      <div id="helmetPips"></div>
+      <div class="vitalRow small">
+        <span class="vitalLabel">СТ</span>
+        <div class="bar stamina"><i id="staminaBar"></i></div>
+      </div>
+    </div>
+
+    <div class="bottomRight">
+      <div class="weaponHead"><span id="weaponName">Кулаки</span></div>
+      <div class="ammoRow"><b id="magAmmo">—</b><span id="reserveAmmo"></span></div>
+      <div class="slots">
+        <div class="slot" id="slot0"><span class="slotKey">1</span><span class="slotName">—</span><span class="slotAmmo"></span></div>
+        <div class="slot" id="slot1"><span class="slotKey">2</span><span class="slotName">—</span><span class="slotAmmo"></span></div>
+      </div>
+      <div id="healCounts"></div>
+    </div>
+
+    <div id="fpsCounter" class="hidden"></div>
+
+    <div id="hintBar">
+      <span><b>WASD</b> движение</span><span><b>Shift</b> бег</span><span><b>Ctrl</b> присесть</span>
+      <span><b>ЛКМ</b> огонь</span><span><b>ПКМ</b> прицел</span><span><b>R</b> перезарядка</span>
+      <span><b>H</b> лечение</span><span><b>1/2</b> оружие</span><span><b>F</b> подобрать</span><span><b>Tab</b> меню</span>
+    </div>
+  </div>
+
+  <!-- Стартовый экран -->
+  <div id="startScreen">
+    <div class="startBg"></div>
+    <div class="startCard">
+      <div class="logo big">
+        <span class="logoMark">PUBG</span>
+        <span class="logoSub">WEB EDITION</span>
+      </div>
+      <p class="mobileNote hidden" id="mobileNote">⚠️ Игре нужны клавиатура и мышь: открой её на компьютере — на телефоне управление не поддерживается.</p>
+      <p class="tagline">Королевская битва прямо в браузере.<br>Самолёт, парашют, лут, боты и синяя зона — без установки и без 50 ГБ.</p>
+      <div class="features">
+        <div><b>35</b><span>игроков в матче</span></div>
+        <div><b>1.6 км</b><span>остров с домами</span></div>
+        <div><b>7</b><span>фаз синей зоны</span></div>
+        <div><b>0 МБ</b><span>ассетов — всё процедурное</span></div>
+      </div>
+      <button id="startBtn" class="primary">В БОЙ</button>
+      <button id="settingsToggle" class="ghost">Настройки</button>
+      <div id="settingsPanel" class="hidden">
+        <label>Чувствительность мыши <input id="sensRange" type="range" min="0.2" max="3" step="0.1" value="1"></label>
+        <label>Громкость <input id="volumeRange" type="range" min="0" max="100" step="1" value="65"></label>
+        <label>Поле зрения <input id="fovRange" type="range" min="65" max="100" step="1" value="78"></label>
+        <label>Графика
+          <select id="qualitySelect">
+            <option value="low">Низкая (слабый ПК)</option>
+            <option value="medium" selected>Средняя</option>
+            <option value="high">Высокая</option>
+          </select>
+        </label>
+        <label class="check"><input id="damageNumbers" type="checkbox" checked> Показывать урон</label>
+      </div>
+      <div class="controls">
+        <div><b>WASD</b> движение</div><div><b>Shift</b> бег</div><div><b>Ctrl</b> присесть</div>
+        <div><b>ЛКМ</b> огонь</div><div><b>ПКМ</b> прицел</div><div><b>R</b> перезарядка</div>
+        <div><b>H</b> аптечка</div><div><b>F</b> подобрать / прыжок</div><div><b>M</b> карта</div>
+        <div><b>Tab</b> пауза</div><div><b>N</b> звук вкл/выкл</div><div><b>1 / 2</b> смена оружия</div>
+      </div>
+      <p class="fine">Игра работает офлайн, без сервера: против тебя 34 бота. Все текстуры и звуки генерируются на устройстве.</p>
+    </div>
+  </div>
+
+  <!-- Пауза -->
+  <div id="pauseScreen" class="modal hidden">
+    <div class="modalCard">
+      <h2>Пауза</h2>
+      <p class="muted">Курсор освобождён. Нажми «Продолжить», чтобы вернуться в бой.</p>
+      <button id="resumeBtn" class="primary">ПРОДОЛЖИТЬ</button>
+      <button id="restartBtn" class="ghost">Новый матч</button>
+      <button id="quitBtn" class="ghost">В главное меню</button>
+    </div>
+  </div>
+
+  <!-- Смерть -->
+  <div id="deathScreen" class="modal hidden">
+    <div class="modalCard death">
+      <div class="deadLabel">ВЫБЫЛ</div>
+      <h2 id="deathTitle">#20 / 35</h2>
+      <p id="killerLine"></p>
+      <div id="deathStats" class="stats"></div>
+      <button id="deathRestartBtn" class="primary">ЕЩЁ РАЗ</button>
+    </div>
+  </div>
+
+  <!-- Победа -->
+  <div id="victoryScreen" class="modal hidden">
+    <div class="modalCard victory">
+      <div class="winLabel">ПОБЕДА</div>
+      <h2>КУРИЦА НА УЖИН</h2>
+      <p class="winSub">#1 — последний выживший на острове</p>
+      <div id="victoryStats" class="stats"></div>
+      <button id="victoryRestartBtn" class="primary">СЛЕДУЮЩИЙ МАТЧ</button>
+    </div>
+  </div>
+
+  <!-- Большая карта -->
+  <div id="fullmap" class="hidden">
+    <div class="mapPanel">
+      <canvas id="bigmap" width="760" height="760"></canvas>
+      <div class="mapLegend">
+        <span><i class="dot you"></i> ты</span>
+        <span><i class="dot zone"></i> безопасная зона</span>
+        <span><i class="dot next"></i> следующая зона</span>
+        <span><i class="dot air"></i> аирдроп</span>
+        <span class="muted">M — закрыть</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<noscript><p style="position:fixed;inset:0;display:flex;align-items:center;justify-content:center;color:#e8eef4;font-family:sans-serif">Для игры нужен включённый JavaScript.</p></noscript>
+<script type="module" src="js/main.js"></script>
+</body>
+</html>
