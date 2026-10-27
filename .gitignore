@@ -1,12 +1,4 @@
-# зависимости и сборка не нужны — проект полностью статический
 node_modules/
 package-lock.json
-*.tgz
-.DS_Store
-.idea/
-.vscode/
-__pycache__/
-*.pyc
-
-# игровые скриншоты, снятые браузерным тестом
 .shots/
+.DS_Store
